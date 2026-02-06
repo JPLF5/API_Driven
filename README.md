@@ -1,83 +1,224 @@
-------------------------------------------------------------------------------------------------------
-ATELIER API-DRIVEN INFRASTRUCTURE
-------------------------------------------------------------------------------------------------------
-L’idée en 30 secondes : **Orchestration de services AWS via API Gateway et Lambda dans un environnement émulé**.  
-Cet atelier propose de concevoir une architecture **API-driven** dans laquelle une requête HTTP déclenche, via **API Gateway** et une **fonction Lambda**, des actions d’infrastructure sur des **instances EC2**, le tout dans un **environnement AWS simulé avec LocalStack** et exécuté dans **GitHub Codespaces**. L’objectif est de comprendre comment des services cloud serverless peuvent piloter dynamiquement des ressources d’infrastructure, indépendamment de toute console graphique.Cet atelier propose de concevoir une architecture API-driven dans laquelle une requête HTTP déclenche, via API Gateway et une fonction Lambda, des actions d’infrastructure sur des instances EC2, le tout dans un environnement AWS simulé avec LocalStack et exécuté dans GitHub Codespaces. L’objectif est de comprendre comment des services cloud serverless peuvent piloter dynamiquement des ressources d’infrastructure, indépendamment de toute console graphique.
-  
--------------------------------------------------------------------------------------------------------
-Séquence 1 : Codespace de Github
--------------------------------------------------------------------------------------------------------
-Objectif : Création d'un Codespace Github  
-Difficulté : Très facile (~5 minutes)
--------------------------------------------------------------------------------------------------------
-RDV sur Codespace de Github : <a href="https://github.com/features/codespaces" target="_blank">Codespace</a> **(click droit ouvrir dans un nouvel onglet)** puis créer un nouveau Codespace qui sera connecté à votre Repository API-Driven.
-  
----------------------------------------------------
-Séquence 2 : Création de l'environnement AWS (LocalStack)
----------------------------------------------------
-Objectif : Créer l'environnement AWS simulé avec LocalStack  
-Difficulté : Simple (~5 minutes)
----------------------------------------------------
+# 🚀 API-Driven Infrastructure - LocalStack
 
-Dans le terminal du Codespace copier/coller les codes ci-dessous etape par étape :  
+> **Orchestration de services AWS via API Gateway et Lambda dans un environnement émulé**
 
-**Installation de l'émulateur LocalStack**  
+Ce projet implémente une architecture **API-driven** où une simple requête HTTP peut **démarrer** ou **arrêter** une instance EC2, le tout orchestré par **API Gateway** et **Lambda**, dans un environnement **LocalStack** exécuté sur **GitHub Codespaces**.
+
+![Architecture](API_Driven.png)
+
+---
+
+## 📋 Table des matières
+
+- [Prérequis](#-prérequis)
+- [Démarrage rapide](#-démarrage-rapide)
+- [Architecture technique](#-architecture-technique)
+- [Structure du projet](#-structure-du-projet)
+- [Commandes Makefile](#-commandes-makefile)
+- [Utilisation de l'API](#-utilisation-de-lapi)
+- [Dépannage](#-dépannage)
+
+---
+
+## 🔧 Prérequis
+
+- **GitHub Codespaces** (recommandé) ou un environnement Linux avec Docker
+- Python 3.x
+- pip
+
+---
+
+## ⚡ Démarrage rapide
+
+### 1️⃣ Créer un Codespace
+
+1. Rendez-vous sur [GitHub Codespaces](https://github.com/features/codespaces)
+2. Créez un nouveau Codespace connecté à ce repository
+
+### 2️⃣ Lancer l'installation complète
+
+Dans le terminal du Codespace, exécutez simplement :
+
+```bash
+make all
 ```
-sudo -i mkdir rep_localstack
+
+Cette commande exécute automatiquement :
+- ✅ Installation des dépendances (awscli, localstack)
+- ✅ Démarrage de LocalStack
+- ✅ Création d'une instance EC2
+- ✅ Déploiement de la fonction Lambda
+- ✅ Configuration de l'API Gateway
+
+### 3️⃣ Rendre le port public
+
+> ⚠️ **Important** : Dans l'onglet **PORTS** de Codespaces, rendez le port **4566** **public** pour pouvoir accéder à l'API.
+
+### 4️⃣ Tester l'API
+
+À la fin du déploiement, le script affiche les commandes `curl` prêtes à l'emploi :
+
+```bash
+# Démarrer l'instance EC2
+curl "https://votre-codespace-4566.app.github.dev/restapis/xxx/prod/_user_request_/?action=start"
+
+# Arrêter l'instance EC2
+curl "https://votre-codespace-4566.app.github.dev/restapis/xxx/prod/_user_request_/?action=stop"
 ```
+
+---
+
+## 🏗 Architecture technique
+
 ```
-sudo -i python3 -m venv ./rep_localstack
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│   Client HTTP   │────▶│   API Gateway   │────▶│     Lambda      │
+│   (curl/browser)│     │   (GET /)       │     │ (GestionEC2)    │
+└─────────────────┘     └─────────────────┘     └────────┬────────┘
+                                                         │
+                                                         ▼
+                                                ┌─────────────────┐
+                                                │   Instance EC2  │
+                                                │   start/stop    │
+                                                └─────────────────┘
 ```
+
+### Flux de données
+
+1. **Requête HTTP** → L'utilisateur envoie une requête GET avec `?action=start` ou `?action=stop`
+2. **API Gateway** → Reçoit la requête et la transmet à la fonction Lambda
+3. **Lambda** → Exécute l'action demandée sur l'instance EC2 (via boto3)
+4. **Réponse JSON** → Retourne le statut de l'opération
+
+---
+
+## 📁 Structure du projet
+
 ```
-sudo -i pip install --upgrade pip && python3 -m pip install localstack && export S3_SKIP_SIGNATURE_VALIDATION=0
+API_Driven/
+├── Makefile              # Automatisation des commandes
+├── install.sh            # Script d'installation de LocalStack
+├── deploy_api.sh         # Script de déploiement complet
+├── lambda_function.py    # Code de la fonction Lambda
+├── README.md             # Cette documentation
+└── API_Driven.png        # Schéma d'architecture
 ```
+
+### Description des fichiers
+
+| Fichier | Description |
+|---------|-------------|
+| `Makefile` | Orchestre toutes les commandes (install, init, deploy, clean) |
+| `install.sh` | Crée l'environnement virtuel et installe LocalStack |
+| `deploy_api.sh` | Crée l'EC2, déploie Lambda et configure API Gateway |
+| `lambda_function.py` | Fonction Lambda qui pilote l'instance EC2 |
+
+---
+
+## 🛠 Commandes Makefile
+
+| Commande | Description |
+|----------|-------------|
+| `make help` | Affiche l'aide avec toutes les commandes disponibles |
+| `make install` | Installe les dépendances (awscli, localstack) |
+| `make init` | Démarre LocalStack en arrière-plan |
+| `make deploy` | Déploie l'infrastructure (EC2 + Lambda + API Gateway) |
+| `make status` | Vérifie le statut des services LocalStack |
+| `make clean` | Nettoie complètement l'environnement |
+| `make all` | **Exécute tout** : install → init → deploy |
+
+### Exemple d'utilisation
+
+```bash
+# Installation et déploiement complet
+make all
+
+# Vérifier que LocalStack fonctionne
+make status
+
+# Nettoyer pour recommencer
+make clean
 ```
-localstack start -d
+
+---
+
+## 📡 Utilisation de l'API
+
+### Endpoints disponibles
+
+| Action | Paramètre | Description |
+|--------|-----------|-------------|
+| Démarrer | `?action=start` | Démarre l'instance EC2 |
+| Arrêter | `?action=stop` | Arrête l'instance EC2 |
+
+### Exemples de requêtes
+
+```bash
+# Démarrer l'instance
+curl "https://<codespace>-4566.app.github.dev/restapis/<api-id>/prod/_user_request_/?action=start"
+
+# Arrêter l'instance
+curl "https://<codespace>-4566.app.github.dev/restapis/<api-id>/prod/_user_request_/?action=stop"
 ```
-**vérification des services disponibles**  
+
+### Réponses attendues
+
+**Succès :**
+```json
+{
+  "status": "success",
+  "message": "Cible : i-xxx. Action : start. Instance demarree."
+}
 ```
+
+**Erreur (action invalide) :**
+```json
+{
+  "status": "success",
+  "message": "Cible : i-xxx. Action : invalid. Utilisez ?action=start ou stop."
+}
+```
+
+---
+
+## 🔍 Dépannage
+
+### LocalStack ne démarre pas
+
+```bash
+# Vérifier le statut
 localstack status services
+
+# Redémarrer proprement
+make clean
+make all
 ```
-**Réccupération de l'API AWS Localstack** 
-Votre environnement AWS (LocalStack) est prêt. Pour obtenir votre AWS_ENDPOINT cliquez sur l'onglet **[PORTS]** dans votre Codespace et rendez public votre port **4566** (Visibilité du port).
-Réccupérer l'URL de ce port dans votre navigateur qui sera votre ENDPOINT AWS (c'est à dire votre environnement AWS).
-Conservez bien cette URL car vous en aurez besoin par la suite.  
 
-Pour information : IL n'y a rien dans votre navigateur et c'est normal car il s'agit d'une API AWS (Pas un développement Web type UX).
+### L'API retourne une erreur 403
 
----------------------------------------------------
-Séquence 3 : Exercice
----------------------------------------------------
-Objectif : Piloter une instance EC2 via API Gateway
-Difficulté : Moyen/Difficile (~2h)
----------------------------------------------------  
-Votre mission (si vous l'acceptez) : Concevoir une architecture **API-driven** dans laquelle une requête HTTP déclenche, via **API Gateway** et une **fonction Lambda**, lancera ou stopera une **instance EC2** déposée dans **environnement AWS simulé avec LocalStack** et qui sera exécuté dans **GitHub Codespaces**. [Option] Remplacez l'instance EC2 par l'arrêt ou le lancement d'un Docker.  
+➡️ Assurez-vous que le port **4566** est bien **public** dans l'onglet PORTS de Codespaces.
 
-**Architecture cible :** Ci-dessous, l'architecture cible souhaitée.   
-  
-![Screenshot Actions](API_Driven.png)   
-  
----------------------------------------------------  
-## Processus de travail (résumé)
+### La fonction Lambda ne trouve pas l'instance
 
-1. Installation de l'environnement Localstack (Séquence 2)
-2. Création de l'instance EC2
-3. Création des API (+ fonction Lambda)
-4. Ouverture des ports et vérification du fonctionnement
+➡️ L'ID de l'instance est injecté automatiquement lors du déploiement. Relancez :
 
----------------------------------------------------
-Séquence 4 : Documentation  
-Difficulté : Facile (~30 minutes)
----------------------------------------------------
-**Complétez et documentez ce fichier README.md** pour nous expliquer comment utiliser votre solution.  
-Faites preuve de pédagogie et soyez clair dans vos expliquations et processus de travail.  
-   
----------------------------------------------------
-Evaluation
----------------------------------------------------
-Cet atelier, **noté sur 20 points**, est évalué sur la base du barème suivant :  
-- Repository exécutable sans erreur majeure (4 points)
-- Fonctionnement conforme au scénario annoncé (4 points)
-- Degré d'automatisation du projet (utilisation de Makefile ? script ? ...) (4 points)
-- Qualité du Readme (lisibilité, erreur, ...) (4 points)
-- Processus travail (quantité de commits, cohérence globale, interventions externes, ...) (4 points) 
+```bash
+make deploy
+```
+
+---
+
+## 📚 Technologies utilisées
+
+- **LocalStack** - Émulateur AWS local
+- **AWS Lambda** - Fonction serverless
+- **AWS API Gateway** - Point d'entrée HTTP
+- **AWS EC2** - Instance virtuelle à piloter
+- **Python 3 / boto3** - SDK AWS pour Python
+- **GitHub Codespaces** - Environnement de développement cloud
+
+---
+
+## 👤 Auteur
+
+Projet réalisé dans le cadre du cours **STAAOC - Orchestration et Conteneurisation Avancée**.

@@ -61,5 +61,16 @@ echo ""
 echo "🎉 DEPLOIEMENT TERMINE !"
 echo "--------------------------------------------------"
 echo "Instance ID pilotée : $INSTANCE_ID"
-echo "URL API : http://localhost:4566/restapis/$API_ID/$STAGE/_user_request_/?action=stop"
+
+# Détection automatique de l'environnement Codespaces
+if [ -n "$CODESPACE_NAME" ]; then
+    BASE_URL="https://${CODESPACE_NAME}-4566.app.github.dev"
+else
+    BASE_URL="http://localhost:4566"
+fi
+
+echo ""
+echo "📡 Commandes curl :"
+echo "  ▶ START : curl \"${BASE_URL}/restapis/$API_ID/$STAGE/_user_request_/?action=start\""
+echo "  ⏹ STOP  : curl \"${BASE_URL}/restapis/$API_ID/$STAGE/_user_request_/?action=stop\""
 echo "--------------------------------------------------"
